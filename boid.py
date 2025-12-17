@@ -46,6 +46,10 @@ class Boid:
         """
         Separation: Steer to avoid crowding local flockmates.
         Efficient implementation using squared distances.
+        
+        Note: We divide by squared distance rather than normalizing and dividing
+        by distance. This creates stronger repulsion at close range, which is
+        desirable for separation behavior and is computationally more efficient.
         """
         steering = Vector2D(0, 0)
         total = 0
@@ -58,7 +62,8 @@ class Boid:
                 # Calculate difference vector
                 diff = self.position - other.position
                 # Weight by distance (closer = stronger repulsion)
-                diff = diff / dist_sq  # Using squared distance for efficiency
+                # Using squared distance creates stronger close-range repulsion
+                diff = diff / dist_sq
                 steering = steering + diff
                 total += 1
         

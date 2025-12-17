@@ -24,6 +24,13 @@ class Vector2D:
         return Vector2D(self.x * scalar, self.y * scalar)
     
     def __truediv__(self, scalar):
+        """
+        Divide vector by scalar.
+        
+        Returns zero vector on division by zero to maintain simulation stability.
+        This prevents crashes when vectors have zero magnitude, which can occur
+        naturally during boids simulation (e.g., when velocity is zero).
+        """
         if scalar == 0:
             return Vector2D(0, 0)
         return Vector2D(self.x / scalar, self.y / scalar)
