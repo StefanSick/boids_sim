@@ -1,74 +1,17 @@
-# import numpy as np
-# from vispy import app, scene
-# from package.boids_2 import create_boids, step_boids
-
-# class BoidsVisualizer(scene.SceneCanvas):
-#     def __init__(self, n_boids, world_size, physics_config):
-#         scene.SceneCanvas.__init__(self, keys='interactive', show=True, title="Grid-Optimized Boids")
-#         self.unfreeze()
-        
-#         self.n = n_boids
-#         self.world_size = np.array(world_size, dtype=np.float64)
-#         # Grid dimensions: usually world_size / max_radius
-#         max_rad = max(physics_config['ali_rad'], physics_config['coh_rad'])
-#         self.grid_dims = np.array([
-#             int(self.world_size[0] / max_rad),
-#             int(self.world_size[1] / max_rad),
-#             int(self.world_size[2] / max_rad)
-#         ], dtype=np.int32)
-
-#         self.params = physics_config
-#         self.positions, self.velocities = create_boids(self.n, self.world_size)
-        
-#         self.frame_count = 0
-#         self.current_colors = np.ones((self.n_boids, 4), dtype=np.float32)
-
-#         self.view = self.central_widget.add_view()
-#         self.view.camera = 'turntable'
-#         self.view.camera.center = (0, 0, 0)
-#         self.view.camera.distance = self.world_size[0] * 1.5
-
-
-
-#         # Inside BoidsVisualizer.__init__
-#         self.scatter = scene.visuals.Markers(
-#             pos=self.positions, 
-#             size=1.0,            # This is now in WORLD units (2.0 out of 900)
-#             edge_color=None,     # Removes the border for a cleaner "dot" look
-#             face_color='white', 
-#             symbol='arrow',       # Options: 'disc', 'arrow', 'ring', 'clover', etc.
-#             scaling=True,        # <--- THIS IS THE KEY CHANGE
-#             parent=self.view.scene
-#         )
-#         self.box = scene.visuals.Box(width=self.world_size[0], height=self.world_size[1], depth=self.world_size[2],
-#                                      color=(1,1,1,0.05), edge_color='white', parent=self.view.scene)
-
-#         self.timer = app.Timer('auto', connect=self.on_timer, start=True)
-
-#     def on_timer(self, event):
-#         step_boids(
-#             self.positions, self.velocities, self.params['dt'],
-#             self.params['sep_rad'], self.params['ali_rad'], self.params['coh_rad'],
-#             self.params['max_force'], self.params['sep_weight'], self.params['ali_weight'],
-#             self.params['coh_weight'], self.params['max_speed'], self.world_size,
-#             self.grid_dims, self.params['margin'], self.params['turn_factor']
-#         )
-#         self.scatter.set_data(pos=self.positions)
-#         self.update()
 import numpy as np
 from vispy import app, scene
 from package.boids_2 import create_boids, step_boids
 
 class BoidsVisualizer(scene.SceneCanvas):
     def __init__(self, n_boids, world_size, physics_config):
-        # Initialize the Canvas
+       
         scene.SceneCanvas.__init__(self, keys='interactive', show=True, title="Grid-Optimized Boids")
         self.unfreeze()
         
         self.n = n_boids
         self.world_size = np.array(world_size, dtype=np.float64)
         
-        # 1. Calculate Grid Dimensions for Spatial Partitioning
+        # Calculate Grid Dimensions for Spatial Partitioning
         max_rad = max(physics_config['ali_rad'], physics_config['coh_rad'])
         self.grid_dims = np.array([
             int(self.world_size[0] / max_rad),
@@ -76,16 +19,14 @@ class BoidsVisualizer(scene.SceneCanvas):
             int(self.world_size[2] / max_rad)
         ], dtype=np.int32)
 
-        # 2. Setup Physics State
+      
         self.params = physics_config
         self.positions, self.velocities = create_boids(self.n, self.world_size)
         
-        # Color and Frame tracking
         self.frame_count = 0
-        # Initialize current_colors as a (N, 4) array of white
+        # Initialize current_colors 
         self.current_colors = np.ones((self.n, 4), dtype=np.float32) 
 
-        # 3. Setup 3D Scene
         self.view = self.central_widget.add_view()
         self.view.camera = 'turntable'
         self.view.camera.center = (0, 0, 0)
@@ -112,24 +53,23 @@ class BoidsVisualizer(scene.SceneCanvas):
         self.timer = app.Timer('auto', connect=self.on_timer, start=True)
 
     def on_timer(self, event):
-        # --- 1. Physics Step (15 Arguments) ---
-        # This calls your @njit optimized function
+      
         step_boids(
-            self.positions,              # 1
-            self.velocities,             # 2
-            self.params['dt'],           # 3
-            self.params['sep_rad'],      # 4
-            self.params['ali_rad'],      # 5
-            self.params['coh_rad'],      # 6
-            self.params['max_force'],    # 7
-            self.params['sep_weight'],   # 8
-            self.params['ali_weight'],   # 9
-            self.params['coh_weight'],   # 10
-            self.params['max_speed'],    # 11
-            self.world_size,             # 12
-            self.grid_dims,              # 13
-            self.params['margin'],       # 14
-            self.params['turn_factor']   # 15
+            self.positions,              
+            self.velocities,             
+            self.params['dt'],           
+            self.params['sep_rad'],      
+            self.params['ali_rad'],      
+            self.params['coh_rad'],      
+            self.params['max_force'],    
+            self.params['sep_weight'],   
+            self.params['ali_weight'],   
+            self.params['coh_weight'],   
+            self.params['max_speed'],    
+            self.world_size,             
+            self.grid_dims,              
+            self.params['margin'],       
+            self.params['turn_factor']   
         )
         
         self.frame_count += 1
@@ -140,13 +80,10 @@ class BoidsVisualizer(scene.SceneCanvas):
             t = np.clip(speeds / self.params['max_speed'], 0.0, 1.0)
             
             # SETTINGS
-            # threshold: at what speed % (0.0 to 1.0) do they turn yellow?
-            # width: how "blurry" is the transition? (0.05 is very sharp, 0.3 is soft)
             threshold = 0.4  
             transition_width = 0.1 
             
-            # This math creates a sharp "Step" 
-            # It stays 0 until the threshold, then jumps to 1 quickly
+           
             low = threshold - (transition_width / 2)
             high = threshold + (transition_width / 2)
             t_sharp = np.clip((t - low) / (high - low), 0.0, 1.0)
@@ -155,12 +92,11 @@ class BoidsVisualizer(scene.SceneCanvas):
             color_red = np.array([0.8, 0.0, 0.0, 1.0], dtype=np.float32) 
             color_yellow = np.array([1.0, 0.9, 0.2, 1.0], dtype=np.float32)
             
-            # Linear blend between Red and Yellow based on the sharp transition
-            # This replaces the complex masking logic with a single clean blend
+            # Linear blend between Red and Yellow 
             colors = color_red + (color_yellow - color_red) * t_sharp[:, np.newaxis]
             
             self.current_colors = colors.astype(np.float32)
-        # --- 3. Push to GPU & Redraw ---
+        # Push to GPU & Redraw
         self.scatter.set_data(
             pos=self.positions,
             face_color=self.current_colors
