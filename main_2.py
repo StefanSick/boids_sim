@@ -12,7 +12,7 @@ if __name__ == "__main__":
     'ali_rad': 50.0,    
     'coh_rad': 20.0,    
     'max_force': 5.0,   
-    'max_speed': 70.0,  
+    'max_speed': 70,
     
     'sep_weight': 55.5,  
     'ali_weight': 2.0,  

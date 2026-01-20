@@ -2,6 +2,7 @@ import numpy as np
 from vispy import app, scene
 from package.boids_2 import create_boids, step_boids
 
+
 class BoidsVisualizer(scene.SceneCanvas):
     def __init__(self, n_boids, world_size, physics_config):
         scene.SceneCanvas.__init__(self, keys='interactive', show=True, title="Grid-Optimized Boids")
@@ -20,6 +21,17 @@ class BoidsVisualizer(scene.SceneCanvas):
         self.params = physics_config
         self.positions, self.velocities = create_boids(self.n, self.world_size)
         
+        self._colors = np.empty((self.n, 4), dtype=np.float32)
+        self._frame = 0
+        self._color_every = 2  # update colors every N frames
+
+        # Optional: tweakable "light direction" for fake shading
+        self._light_dir = np.array([0.3, 0.6, 0.7], dtype=np.float64)
+        self._light_dir /= (np.linalg.norm(self._light_dir) + 1e-8)
+
+        # Initialize colors once
+        self._update_colors()
+
         self.view = self.central_widget.add_view()
         self.view.camera = 'turntable'
         self.view.camera.center = (0, 0, 0)
@@ -30,7 +42,7 @@ class BoidsVisualizer(scene.SceneCanvas):
             pos=self.positions, 
             size=1.0,            # This is now in WORLD units (2.0 out of 900)
             edge_color=None,     # Removes the border for a cleaner "dot" look
-            face_color='white', 
+            face_color=self._colors, 
             symbol='arrow',       # Options: 'disc', 'arrow', 'ring', 'clover', etc.
             scaling=True,        # <--- THIS IS THE KEY CHANGE
             parent=self.view.scene
@@ -40,6 +52,30 @@ class BoidsVisualizer(scene.SceneCanvas):
 
         self.timer = app.Timer('auto', connect=self.on_timer, start=True)
 
+    def _update_colors(self) -> None:
+        """Update self._colors in-place (fast)."""
+        half = self.world_size / 2.0
+
+        # Position -> base RGB
+        rgb = (self.positions + half) / self.world_size
+        np.clip(rgb, 0.0, 1.0, out=rgb)
+
+        # Velocity direction -> brightness
+        v = self.velocities.astype(np.float64, copy=False)
+        vnorm = np.linalg.norm(v, axis=1, keepdims=True) + 1e-8
+        vdir = v / vnorm
+
+        brightness = (vdir @ self._light_dir) * 0.5 + 0.5  # [-1,1] -> [0,1]
+        brightness = brightness.astype(np.float64, copy=False).reshape(-1, 1)
+
+        # shaded_rgb = rgb * (0.35 + 0.65 * brightness)
+        shade = (0.35 + 0.65 * brightness)
+        shaded_rgb = rgb * shade
+
+        # Write into preallocated float32 RGBA buffer
+        self._colors[:, 0:3] = shaded_rgb.astype(np.float32, copy=False)
+        self._colors[:, 3] = 1.0        
+
     def on_timer(self, event):
         step_boids(
             self.positions, self.velocities, self.params['dt'],
@@ -48,5 +84,12 @@ class BoidsVisualizer(scene.SceneCanvas):
             self.params['coh_weight'], self.params['max_speed'], self.world_size,
             self.grid_dims, self.params['margin'], self.params['turn_factor']
         )
-        self.scatter.set_data(pos=self.positions)
+        self._frame += 1
+
+        if (self._frame % self._color_every) == 0:
+            self._update_colors()
+            self.scatter.set_data(pos=self.positions, face_color=self._colors)
+        else:
+            self.scatter.set_data(pos=self.positions, face_color=self._colors)
+
         self.update()
