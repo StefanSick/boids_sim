@@ -1,5 +1,6 @@
 import numpy as np
 from vispy import app, scene
+from vispy.color import Color
 from package.boids_2 import create_boids, step_boids
 
 
@@ -7,7 +8,8 @@ class BoidsVisualizer(scene.SceneCanvas):
     def __init__(self, n_boids, world_size, physics_config):
         scene.SceneCanvas.__init__(self, keys='interactive', show=True, title="Grid-Optimized Boids")
         self.unfreeze()
-        
+        self.bgcolor = (0.88, 0.88, 0.88, 1.0)  # light gray
+
         self.n = n_boids
         self.world_size = np.array(world_size, dtype=np.float64)
         # Grid dimensions: usually world_size / max_radius
@@ -47,8 +49,18 @@ class BoidsVisualizer(scene.SceneCanvas):
             scaling=True,        # <--- THIS IS THE KEY CHANGE
             parent=self.view.scene
         )
-        self.box = scene.visuals.Box(width=self.world_size[0], height=self.world_size[1], depth=self.world_size[2],
-                                     color=(1,1,1,0.05), edge_color='white', parent=self.view.scene)
+
+        self.box = scene.visuals.Box(
+            width=self.world_size[0],
+            height=self.world_size[1],
+            depth=self.world_size[2],
+            color=(1.0, 1.0, 1.0, 0.18),      # white interior fill (slightly transparent)
+            edge_color=(0.0, 0.0, 0.0, 0.75), # black edges for contrast
+            parent=self.view.scene
+        )
+
+        # Proper blending for transparency
+        self.box.set_gl_state('translucent', depth_test=True)
 
         self.timer = app.Timer('auto', connect=self.on_timer, start=True)
 
@@ -69,8 +81,9 @@ class BoidsVisualizer(scene.SceneCanvas):
         brightness = brightness.astype(np.float64, copy=False).reshape(-1, 1)
 
         # shaded_rgb = rgb * (0.35 + 0.65 * brightness)
-        shade = (0.35 + 0.65 * brightness)
+        shade = (0.20 + 0.80 * brightness)
         shaded_rgb = rgb * shade
+        shaded_rgb = np.power(shaded_rgb, 0.8)
 
         # Write into preallocated float32 RGBA buffer
         self._colors[:, 0:3] = shaded_rgb.astype(np.float32, copy=False)
